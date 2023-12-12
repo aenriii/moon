@@ -57,7 +57,7 @@ impl DiscordInstall {
             let app_folder = app_folders.first()?;
             path = app_folder.clone();
             (
-                Some(app_folder.join("Discord.exe").exists()),
+                Some(app_folder.join(concat_string!(kind.to_string(), ".exe")).exists()),
                 if app_folder.join("resources").join("app").exists()
                     || app_folder.join("resources").join("app.asar").is_dir() {
                     true
