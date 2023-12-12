@@ -276,13 +276,7 @@ impl DiscordInstall {
     pub async fn kill(&self) -> Result<(), Box<dyn Error>> {
         #[cfg(target_os = "windows")]
         {
-            if !Platform::cmd_is_ok(vec![
-                "taskkill".to_owned(),
-                "/IM".to_owned(),
-                concat_string!(self.kind.to_string(), ".exe"),
-                "/F".to_owned(),
-                "/T".to_owned(),
-            ]) {
+            if !Platform::win_termbyname(concat_string!(self.kind.to_string(), ".exe")) {
                 return Err("Failed to kill Discord".into());
             }
         }

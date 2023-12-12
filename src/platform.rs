@@ -120,6 +120,88 @@ impl Platform {
         cmd.stderr(Stdio::null());
         Ok(cmd.spawn()?.wait()?)
     }
+
+    #[cfg(target_os = "windows")]
+    #[inline(always)]
+    pub fn win_termbyname(taskname: String) -> bool {
+        l::info!("Terminating process by name: {}", taskname);
+        use windows::Win32::System::Diagnostics::ToolHelp::{
+            CreateToolhelp32Snapshot, 
+            TH32CS_SNAPPROCESS, 
+            PROCESSENTRY32, 
+            Process32First, 
+            Process32Next
+        };
+        use windows::Win32::Foundation::CloseHandle;
+        use windows::Win32::System::Threading::{
+            PROCESS_TERMINATE,
+            OpenProcess,
+            TerminateProcess
+        };
+
+        let process_snapshot = match unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) } {
+            Ok(handle) => handle,
+            _ => {
+                l::error!("Failed to create process snapshot handle");
+                return false;
+            }
+        };
+        
+        let mut proc_entry: PROCESSENTRY32 = Default::default();
+        proc_entry.dwSize = std::mem::size_of::<PROCESSENTRY32>() as u32;
+
+        if !unsafe { Process32First(process_snapshot, &mut proc_entry as *mut PROCESSENTRY32) }.is_ok() {unsafe {
+
+            match CloseHandle(process_snapshot) {
+                Ok(_) => {},
+                Err(e) => {
+                    l::error!("Failed to close process snapshot handle: {}", e);
+                }
+            }
+            return false;
+
+        }}
+        loop {
+            let proc_name = unsafe { std::ffi::CStr::from_ptr(proc_entry.szExeFile.as_ptr() as *mut i8) }.to_string_lossy().into_owned();
+
+            if proc_name == taskname {
+                unsafe {
+                    let proc = match OpenProcess(PROCESS_TERMINATE, false, proc_entry.th32ProcessID) {
+                        Ok(handle) => handle,
+                        Err(e) => {
+                            l::error!("Failed to open process handle: {}", e);
+                            match CloseHandle(process_snapshot) {
+                                Ok(_) => {},
+                                Err(e) => {
+                                    l::error!("Failed to close process snapshot handle: {}", e);
+                                }
+                            }
+                            return false;
+                        }
+                    };
+                    match TerminateProcess(proc, 0) {
+                        Ok(_) => return true,
+                        Err(e) => {
+                            
+                            l::error!("Failed to terminate process: {}", e);
+                            match CloseHandle(process_snapshot) {
+                                Ok(_) => {},
+                                Err(e) => {
+                                    l::error!("Failed to close process snapshot handle: {}", e);
+                                }
+                            }
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            if !unsafe { Process32Next(process_snapshot, &mut proc_entry as *mut PROCESSENTRY32)}.is_ok() {
+                break;
+            }
+        }
+        false
+    }
 }
 
 #[inline(always)]

@@ -34,7 +34,7 @@ pub async fn up(args: Args) {
             l::error!("Failed to update moonlight: {}", e);
             needs_revert = true;
         };
-        tx.send(needs_revert).await;
+        let _ = tx.send(needs_revert).await;
         
     })());
     l::info!("Killing discord...");
