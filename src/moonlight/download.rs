@@ -21,7 +21,7 @@ pub async fn download(channel: Channel, path: PathBuf, repo_location: Option<Str
 
             if check_ver {
                 if path.join("dist/version.txt").exists() {
-                    if fs::read_to_string(path.join("dist/version.txt"))? == release.tag_name {
+                    if fs::read_to_string(path.join("dist/version.txt"))?.contains(release.tag_name.as_str()) {
                         l::info!("Moonlight is up to date");
                         return Ok(false);
                     }
@@ -30,10 +30,10 @@ pub async fn download(channel: Channel, path: PathBuf, repo_location: Option<Str
 
             let tarball = reqwest::get(release.assets.iter().find(|a| a.name == "dist.tar.gz").unwrap().browser_download_url.to_string()).await?.bytes().await?;
             let stable_ref = release.tag_name;
-            tar::Archive::new(flate2::read::GzDecoder::new(std::io::Cursor::new(tarball))).unpack(&path)?; 
+            tar::Archive::new(flate2::read::GzDecoder::new(std::io::Cursor::new(tarball))).unpack(&path.join("dist"))?; 
 
-            fs::write(path.join("version.txt"), stable_ref)?;
-            fs::write(path.join("branch.txt"), "stable")?;
+            fs::write(path.join("dist/version.txt"), stable_ref)?;
+            fs::write(path.join("dist/branch.txt"), "stable")?;
             
             l::info!(
                 "Downloaded moonlight (channel: {:?}) in {}ms",
@@ -54,8 +54,8 @@ pub async fn download(channel: Channel, path: PathBuf, repo_location: Option<Str
             let tarball = reqwest::get("https://moonlight-mod.github.io/moonlight/dist.tar.gz").await?.bytes().await?;
             tar::Archive::new(flate2::read::GzDecoder::new(std::io::Cursor::new(tarball))).unpack(&path.join("dist"))?;
 
-            fs::write(path.join("version.txt"), nightly_ref)?;
-            fs::write(path.join("branch.txt"), "nightly")?;
+            fs::write(path.join("dist/version.txt"), nightly_ref)?;
+            fs::write(path.join("dist/branch.txt"), "nightly")?;
 
             l::info!(
                 "Downloaded moonlight (channel: {:?}) in {}ms",
@@ -81,8 +81,8 @@ pub async fn download(channel: Channel, path: PathBuf, repo_location: Option<Str
             git2::Repository::clone(&repo_location.unwrap_or("https://github.com/moonlight-mod/moonlight".to_string()), &path)?;
 
 
-            fs::write(path.join("branch.txt"), "git")?;
-            fs::write(path.join("version.txt"), get_ref(Channel::Git).await)?; // TODO: make this not use await (it's not async, but it's in an async function
+            fs::write(path.join("dist/branch.txt"), "git")?;
+            fs::write(path.join("dist/version.txt"), get_ref(Channel::Git).await)?; // TODO: make this not use await (it's not async, but it's in an async function
             l::info!(
                 "Downloaded moonlight (channel: {:?}) in {}ms",
                 channel, stopwatch.elapsed().as_millis()

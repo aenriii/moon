@@ -1,3 +1,5 @@
+#![feature(async_closure)]
+
 mod platform;
 mod cli;
 mod discord;
@@ -7,7 +9,7 @@ use std::path::PathBuf;
 use clap::Parser;
 use log as l;
 
-pub(self) use platform::Platform; 
+pub use platform::Platform; 
 use crate::{discord::DiscordKind, moonlight::Channel, cli::{Subcommand, actions}};
 
 #[tokio::main]

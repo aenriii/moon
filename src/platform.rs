@@ -1,4 +1,5 @@
-use std::process::ExitStatus;
+use std::process::{Command, Stdio, ExitStatus};
+use std::error::Error;
 
 use crate::discord::{DiscordKind, DiscordInstall};
 
@@ -21,6 +22,8 @@ impl Platform {
     pub fn cmd_is_ok(mut parts: Vec<String>) -> bool {
         use std::process::Command;
         let mut cmd = Command::new(parts.remove(0));
+        cmd.stdout(Stdio::null());
+        cmd.stderr(Stdio::null());
         cmd.args(parts);
         match cmd.status() {
             Ok(s) => s.success(),
@@ -85,6 +88,37 @@ impl Platform {
         } else {
             Ok(())
         }
+    }
+
+    #[cfg(target_os = "windows")]
+    #[inline(always)]
+    pub fn disown_launch(args: Vec<String>) -> Result<ExitStatus, Box<dyn Error>> {
+        let mut cmd = Command::new("cmd");
+        cmd.args(vec!["/C", "start", "/b"]);
+        cmd.args(args);
+        cmd.stdout(Stdio::null());
+        cmd.stderr(Stdio::null());
+        Ok(cmd.spawn()?.wait()?)
+    }
+
+    #[cfg(target_os = "macos")]
+    #[inline(always)]
+    pub fn disown_launch(args: Vec<String>) -> Result<ExitStatus, Box<dyn Error>> {
+        let mut cmd = Command::new("open");
+        cmd.args(args);
+        cmd.stdout(Stdio::null());
+        cmd.stderr(Stdio::null());
+        Ok(cmd.spawn()?.wait()?)
+    }
+
+    #[cfg(target_os = "linux")]
+    #[inline(always)]
+    pub fn disown_launch(args: Vec<String>) -> Result<ExitStatus, Box<dyn Error>> {
+        let mut cmd = Command::new("sh");
+        cmd.args(vec!["-c", &args.join(" ")]);
+        cmd.stdout(Stdio::null());
+        cmd.stderr(Stdio::null());
+        Ok(cmd.spawn()?.wait()?)
     }
 }
 
