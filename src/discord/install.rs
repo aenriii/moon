@@ -225,7 +225,9 @@ impl DiscordInstall {
         l::debug!("Moving Discord items from {:?}", root_path);
         let app_asar = root_path.join("app.asar");
         let _app_asar = root_path.join("_app.asar");
-        fs::rename(app_asar, _app_asar)?;
+        if app_asar.exists() {
+            fs::rename(app_asar, _app_asar)?;
+        }
         Ok(())
     }
     #[inline(always)]
@@ -353,15 +355,18 @@ impl DiscordInstall {
         }
         #[cfg(target_os = "macos")]
         {
-            if !Platform::cmd_is_ok(vec![
-                "killall".to_owned(),
-                // The executable name is the same as the folder name
-                path.file_name()
-                    .unwrap()
-                    .to_string_lossy()
-                    .to_string()
-                    .replace(".app", ""),
-            ]) {
+            if !Platform::cmd_is_ok(
+                vec![
+                    "killall".to_owned(),
+                    // The executable name is the same as the folder name
+                    path.file_name()
+                        .unwrap()
+                        .to_string_lossy()
+                        .to_string()
+                        .replace(".app", ""),
+                ],
+                None,
+            ) {
                 return Err("Failed to kill Discord".into());
             }
         }
@@ -369,26 +374,33 @@ impl DiscordInstall {
         {
             match self.flatpak {
                 Flatpak::System => {
-                    if !Platform::cmd_is_ok(vec![
-                        "flatpak".to_owned(),
-                        "kill".to_owned(),
-                        "com.discordapp.Discord".to_owned(),
-                    ]) {
+                    if !Platform::cmd_is_ok(
+                        vec![
+                            "flatpak".to_owned(),
+                            "kill".to_owned(),
+                            "com.discordapp.Discord".to_owned(),
+                        ],
+                        None,
+                    ) {
                         return Err("Failed to kill Discord".into());
                     }
                 }
                 Flatpak::User => {
-                    if !Platform::cmd_is_ok(vec![
-                        "flatpak".to_owned(),
-                        "kill".to_owned(),
-                        "--user".to_owned(),
-                        "com.discordapp.Discord".to_owned(),
-                    ]) {
+                    if !Platform::cmd_is_ok(
+                        vec![
+                            "flatpak".to_owned(),
+                            "kill".to_owned(),
+                            "--user".to_owned(),
+                            "com.discordapp.Discord".to_owned(),
+                        ],
+                        None,
+                    ) {
                         return Err("Failed to kill Discord".into());
                     }
                 }
                 Flatpak::Not => {
-                    if !Platform::cmd_is_ok(vec!["killall".to_owned(), self.kind.to_string()]) {
+                    if !Platform::cmd_is_ok(vec!["killall".to_owned(), self.kind.to_string()], None)
+                    {
                         return Err("Failed to kill Discord".into());
                     };
                 }
@@ -429,21 +441,27 @@ impl DiscordInstall {
         {
             match self.flatpak {
                 Flatpak::System => {
-                    if !Platform::cmd_is_ok(vec![
-                        "flatpak".to_owned(),
-                        "run".to_owned(),
-                        "com.discordapp.Discord".to_owned(),
-                    ]) {
+                    if !Platform::cmd_is_ok(
+                        vec![
+                            "flatpak".to_owned(),
+                            "run".to_owned(),
+                            "com.discordapp.Discord".to_owned(),
+                        ],
+                        None,
+                    ) {
                         return Err("Failed to start Discord".into());
                     }
                 }
                 Flatpak::User => {
-                    if !Platform::cmd_is_ok(vec![
-                        "flatpak".to_owned(),
-                        "run".to_owned(),
-                        "--user".to_owned(),
-                        "com.discordapp.Discord".to_owned(),
-                    ]) {
+                    if !Platform::cmd_is_ok(
+                        vec![
+                            "flatpak".to_owned(),
+                            "run".to_owned(),
+                            "--user".to_owned(),
+                            "com.discordapp.Discord".to_owned(),
+                        ],
+                        None,
+                    ) {
                         return Err("Failed to start Discord".into());
                     }
                 }

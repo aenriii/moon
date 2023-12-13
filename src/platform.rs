@@ -22,12 +22,15 @@ impl Platform {
         return format!("{}/{}", env("HOME", "~/"), ".config/moon");
     }
     #[inline(always)]
-    pub fn cmd_is_ok(mut parts: Vec<String>) -> bool {
+    pub fn cmd_is_ok(mut parts: Vec<String>, cwd: Option<&str>) -> bool {
         use std::process::Command;
         let mut cmd = Command::new(parts.remove(0));
         cmd.stdout(Stdio::null());
         cmd.stderr(Stdio::null());
         cmd.args(parts);
+        if let Some(cwd) = cwd {
+            cmd.current_dir(cwd);
+        }
         match cmd.status() {
             Ok(s) => s.success(),
             _ => false,
