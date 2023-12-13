@@ -2,7 +2,7 @@ use std::{path::{PathBuf}, error::Error};
 use log as l;
 use concat_string::concat_string; // you looove microoptimizations
 #[cfg(target_os = "windows")]
-use path_slash::{PathExt as _, PathBufExt as _};
+use path_slash::{PathBufExt as _};
 use crate::Platform;
 
 use super::DiscordKind;
@@ -147,6 +147,7 @@ impl DiscordInstall {
         if self.injected {
             l::warn!("Discord install at {:?} is already injected, uninjecting first", self.path);
             self.uninject().await?;
+            l::info!("Reinjecting Discord {:?}", self.kind)
         }
         
         self.move_discord_items().await?;
@@ -156,7 +157,7 @@ impl DiscordInstall {
     }
 
     pub async fn uninject(&self) -> Result<(), Box<dyn Error>> {
-        use std::fs;
+        
         if !self.injected {
             l::warn!("Discord install at {:?} is not injected", self.path);
             return Ok(());
@@ -192,6 +193,10 @@ impl DiscordInstall {
         {
             root_path = root_path.join("resources");
         }
+        #[cfg(target_os = "macos")]
+        {
+            root_path = root_path.join("Contents/Resources");
+        }
         
         l::debug!("Moving Discord items from {:?}", root_path);
         let app_asar = root_path.join("app.asar");
@@ -214,8 +219,19 @@ impl DiscordInstall {
         {
             root_path = root_path.join("resources");
         }
+        #[cfg(target_os = "macos")]
+        {
+            root_path = root_path.join("Contents/Resources");
+        }
         let app_asar = root_path.join("app.asar");
         let _app_asar = root_path.join("_app.asar");
+        if app_asar.exists() {
+            if app_asar.is_dir() {
+                fs::remove_dir_all(app_asar.clone())?;
+            } else if _app_asar.exists() {
+                fs::remove_file(app_asar.clone())?;
+            }
+        }
         fs::rename(_app_asar, app_asar)?;
         Ok(())
     }
@@ -234,6 +250,10 @@ impl DiscordInstall {
         #[cfg(target_os = "windows")]
         {
             root_path = root_path.join("resources");
+        }
+        #[cfg(target_os = "macos")]
+        {
+            root_path = root_path.join("Contents/Resources");
         }
         root_path = root_path.join("app");
         if !root_path.exists() {
@@ -268,12 +288,24 @@ impl DiscordInstall {
         {
             root_path = root_path.join("resources");
         }
+        #[cfg(target_os = "macos")]
+        {
+            root_path = root_path.join("Contents/Resources");
+        }
         root_path = root_path.join("app");
-        fs::remove_dir_all(root_path)?;
+        if root_path.exists() {
+            fs::remove_dir_all(&root_path)?;
+        }
+        let old_asar_path = &root_path.join("_app.asar");
+        let asar_path = &root_path.join("app.asar");
+        if old_asar_path.exists() {
+            fs::rename(old_asar_path, asar_path)?;
+        }
         Ok(())
     }
 
     pub async fn kill(&self) -> Result<(), Box<dyn Error>> {
+        let path = self.path.clone();
         #[cfg(target_os = "windows")]
         {
             if !Platform::win_termbyname(concat_string!(self.kind.to_string(), ".exe")) {
@@ -284,7 +316,8 @@ impl DiscordInstall {
         {
             if !Platform::cmd_is_ok(vec![
                 "killall".to_owned(),
-                "Discord".to_owned(),
+                // The executable name is the same as the folder name
+                path.file_name().unwrap().to_string_lossy().to_string().replace(".app", ""),
             ]) {
                 return Err("Failed to kill Discord".into());
             }
@@ -312,7 +345,12 @@ impl DiscordInstall {
                     }
                 },
                 Flatpak::Not => {
-                    return Err("Not implemented: kill Discord without flatpak".into());
+                    if !Platform::cmd_is_ok(vec![
+                        "killall".to_owned(),
+                        self.kind.to_string()
+                    ]) {
+                        return Err("Failed to kill Discord".into());
+                    };
                 }
             }
         }

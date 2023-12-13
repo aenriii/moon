@@ -5,16 +5,17 @@ mod cli;
 mod discord;
 mod moonlight;
 
-use std::path::PathBuf;
+
 use clap::Parser;
+use env_logger::Env;
 use log as l;
 
 pub use platform::Platform; 
-use crate::{discord::DiscordKind, moonlight::Channel, cli::{Subcommand, actions}};
+use crate::cli::{Subcommand, actions};
 
 #[tokio::main]
 async fn main() {
-    env_logger::init();
+    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
     let stopwatch = std::time::Instant::now();
     
     let args = cli::Args::parse();

@@ -1,4 +1,4 @@
-use std::{path::PathBuf, time::Duration, thread, future::Future};
+use std::path::PathBuf;
 
 use crate::{cli::args::up::Args, discord::DiscordKind, moonlight::{Channel, init_moonlight}, platform::{Platform, env}};
 

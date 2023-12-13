@@ -4,7 +4,7 @@ mod download;
 use std::path::PathBuf;
 
 pub use channel::Channel;
-pub use download::{download, get_ref};
+pub use download::{download};
 
 pub async fn init_moonlight(at: PathBuf, channel: Option<Channel>, repo_location: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
     let channel = channel.unwrap_or({
@@ -30,8 +30,4 @@ pub async fn init_moonlight(at: PathBuf, channel: Option<Channel>, repo_location
     download(channel, at, repo_location, true).await?;
 
     Ok(())
-}
-
-pub async fn moonlight_exists(at: PathBuf) -> Result<bool, Box<dyn std::error::Error>> {
-    Ok(at.join("moonlight").exists())
 }
